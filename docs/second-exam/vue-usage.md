@@ -2340,3 +2340,2832 @@ vue create my-project
 npm create vue@latest my-project
 # 选择 "Add Vue Router for Single Page Application development"
 ```
+:::
+## 🔥如何获取路由参数？
+::: details
+Vue Router中获取路由参数主要通过**$route对象**，包含params路径参数和query查询参数两种方式。
+
+获取方式 🎯
+- 路径参数：this.$route.params.参数名
+- 查询参数：this.$route.query.参数名
+- Vue3方式：useRoute().params 或 useRoute().query
+
+```js
+// 路径参数：/user/123
+const userId = this.$route.params.id
+
+// 查询参数：/user?tab=profile&page=1  
+const tab = this.$route.query.tab
+const page = this.$route.query.page
+```
+响应式获取
+```js
+// 计算属性方式（推荐）
+computed: {
+  userId() {
+    return this.$route.params.id
+  }
+}
+```
+- 基础获取方式 🎯
+```js
+<template>
+  <div>
+    <h1>用户ID: {{ userId }}</h1>
+    <h2>文章ID: {{ postId }}</h2>
+    <p>完整路径: {{ $route.path }}</p>
+  </div>
+</template>
+
+<script>
+// 路由配置: /user/:id/post/:postId
+export default {
+  created() {
+    // 🎯 直接获取
+    console.log('用户ID:', this.$route.params.id)
+    console.log('文章ID:', this.$route.params.postId)
+    console.log('所有路径参数:', this.$route.params)
+  },
+  
+  computed: {
+    // 🎯 响应式获取（推荐）
+    userId() {
+      return this.$route.params.id
+    },
+    
+    postId() {
+      return this.$route.params.postId
+    }
+  }
+}
+</script>
+```
+- 参数类型处理 🔧
+```js
+export default {
+  computed: {
+    // 🎯 转换为数字类型
+    userId() {
+      return parseInt(this.$route.params.id) || 0
+    },
+    
+    // 🎯 默认值处理
+    categoryId() {
+      return this.$route.params.categoryId || 'default'
+    },
+    
+    // 🎯 参数验证
+    validUserId() {
+      const id = parseInt(this.$route.params.id)
+      return id > 0 ? id : null
+    }
+  }
+}
+```
+- 多种查询参数处理 📊
+```js
+<template>
+  <div>
+    <h2>搜索关键词: {{ searchKeyword }}</h2>
+    <p>当前页码: {{ currentPage }}</p>
+    <p>排序方式: {{ sortBy }}</p>
+    <p>是否显示高级选项: {{ showAdvanced }}</p>
+  </div>
+</template>
+
+<script>
+// URL示例: /search?keyword=vue&page=2&sort=date&advanced=true
+export default {
+  computed: {
+    // 🎯 字符串参数
+    searchKeyword() {
+      return this.$route.query.keyword || ''
+    },
+    
+    // 🎯 数字参数
+    currentPage() {
+      return parseInt(this.$route.query.page) || 1
+    },
+    
+    // 🎯 枚举参数
+    sortBy() {
+      const sort = this.$route.query.sort
+      const validSorts = ['date', 'title', 'views']
+      return validSorts.includes(sort) ? sort : 'date'
+    },
+    
+    // 🎯 布尔参数
+    showAdvanced() {
+      return this.$route.query.advanced === 'true'
+    },
+    
+    // 🎯 数组参数
+    selectedTags() {
+      const tags = this.$route.query.tags
+      if (!tags) return []
+      return Array.isArray(tags) ? tags : [tags]
+    }
+  }
+}
+</script>
+```
+- useRoute Hook使用 🪝
+```js
+<script setup>
+import { useRoute } from 'vue-router'
+import { computed, watch } from 'vue'
+
+const route = useRoute()
+
+// 🎯 响应式获取参数
+const userId = computed(() => route.params.id)
+const searchQuery = computed(() => route.query.search || '')
+const currentPage = computed(() => parseInt(route.query.page) || 1)
+
+// 🎯 监听参数变化
+watch(userId, (newId, oldId) => {
+  console.log(`用户ID从 ${oldId} 变为 ${newId}`)
+  loadUserData(newId)
+})
+
+watch(
+  () => route.query,
+  (newQuery) => {
+    console.log('查询参数变化:', newQuery)
+    performSearch(newQuery)
+  },
+  { deep: true }
+)
+
+// 🎯 组合多个参数
+const searchParams = computed(() => ({
+  keyword: route.query.keyword || '',
+  category: route.query.category || 'all',
+  page: parseInt(route.query.page) || 1,
+  limit: parseInt(route.query.limit) || 10
+}))
+</script>
+```
+实际应用场景 🎪
+- 电商商品详情页 🛒
+```js
+<template>
+  <div class="product-detail">
+    <h1>{{ product.name }}</h1>
+    
+    <!-- 🎯 规格选择 -->
+    <div class="specs">
+      <button 
+        v-for="spec in product.specs"
+        :key="spec.id"
+        :class="{ active: spec.id === selectedSpecId }"
+        @click="selectSpec(spec.id)">
+        {{ spec.name }}
+      </button>
+    </div>
+    
+    <!-- 🎯 评论区域 -->
+    <div class="comments">
+      <div class="comment-filters">
+        <button 
+          v-for="filter in commentFilters"
+          :key="filter.value"
+          :class="{ active: filter.value === currentCommentFilter }"
+          @click="filterComments(filter.value)">
+          {{ filter.label }}
+        </button>
+      </div>
+      
+      <div class="pagination">
+        <button 
+          v-for="page in totalPages"
+          :key="page"
+          :class="{ active: page === commentPage }"
+          @click="goToCommentPage(page)">
+          {{ page }}
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+// 路由: /product/:id?spec=color&comment_filter=all&comment_page=1
+export default {
+  data() {
+    return {
+      product: null,
+      commentFilters: [
+        { label: '全部', value: 'all' },
+        { label: '好评', value: 'positive' },
+        { label: '中评', value: 'neutral' },
+        { label: '差评', value: 'negative' }
+      ]
+    }
+  },
+  
+  computed: {
+    // 🎯 获取商品ID
+    productId() {
+      return this.$route.params.id
+    },
+    
+    // 🎯 获取选中的规格
+    selectedSpecId() {
+      return this.$route.query.spec || 'default'
+    },
+    
+    // 🎯 获取评论过滤条件
+    currentCommentFilter() {
+      return this.$route.query.comment_filter || 'all'
+    },
+    
+    // 🎯 获取评论页码
+    commentPage() {
+      return parseInt(this.$route.query.comment_page) || 1
+    }
+  },
+  
+  methods: {
+    // 🎯 选择规格
+    selectSpec(specId) {
+      this.$router.push({
+        params: this.$route.params,
+        query: {
+          ...this.$route.query,
+          spec: specId
+        }
+      })
+    },
+    
+    // 🎯 过滤评论
+    filterComments(filter) {
+      this.$router.push({
+        params: this.$route.params,
+        query: {
+          ...this.$route.query,
+          comment_filter: filter,
+          comment_page: 1  // 重置页码
+        }
+      })
+    },
+    
+    // 🎯 评论分页
+    goToCommentPage(page) {
+      this.$router.push({
+        params: this.$route.params,
+        query: {
+          ...this.$route.query,
+          comment_page: page
+        }
+      })
+    }
+  },
+  
+  watch: {
+    // 🎯 监听商品ID变化
+    productId: {
+      immediate: true,
+      handler(newId) {
+        this.loadProduct(newId)
+      }
+    },
+    
+    // 🎯 监听查询参数变化
+    '$route.query': {
+      handler(newQuery) {
+        this.loadComments(newQuery)
+      }
+    }
+  }
+}
+</script>
+```
+用户管理列表页 👥
+```js
+<template>
+  <div class="user-management">
+    <!-- 🎯 搜索和过滤 -->
+    <div class="filters">
+      <input 
+        v-model="searchForm.keyword"
+        @input="debounceSearch"
+        placeholder="搜索用户名或邮箱">
+      
+      <select v-model="searchForm.status" @change="applyFilters">
+        <option value="">全部状态</option>
+        <option value="active">激活</option>
+        <option value="inactive">未激活</option>
+        <option value="banned">已封禁</option>
+      </select>
+      
+      <select v-model="searchForm.role" @change="applyFilters">
+        <option value="">全部角色</option>
+        <option value="admin">管理员</option>
+        <option value="user">普通用户</option>
+        <option value="vip">VIP用户</option>
+      </select>
+    </div>
+    
+    <!-- 🎯 用户列表 -->
+    <div class="user-list">
+      <div v-for="user in users" :key="user.id" class="user-item">
+        <router-link :to="{ name: 'UserDetail', params: { id: user.id }}">
+          {{ user.name }}
+        </router-link>
+      </div>
+    </div>
+    
+    <!-- 🎯 分页 -->
+    <div class="pagination">
+      <button 
+        v-for="page in totalPages"
+        :key="page"
+        :class="{ active: page === currentPage }"
+        @click="goToPage(page)">
+        {{ page }}
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      users: [],
+      totalPages: 0,
+      searchForm: {
+        keyword: '',
+        status: '',
+        role: '',
+        page: 1,
+        limit: 20
+      }
+    }
+  },
+  
+  computed: {
+    // 🎯 从URL同步搜索条件
+    currentPage() {
+      return parseInt(this.$route.query.page) || 1
+    }
+  },
+  
+  created() {
+    // 🎯 初始化时从URL获取搜索条件
+    this.syncFromRoute()
+  },
+  
+  methods: {
+    // 🎯 从路由同步搜索条件
+    syncFromRoute() {
+      const query = this.$route.query
+      this.searchForm = {
+        keyword: query.keyword || '',
+        status: query.status || '',
+        role: query.role || '',
+        page: parseInt(query.page) || 1,
+        limit: parseInt(query.limit) || 20
+      }
+    },
+    
+    // 🎯 应用过滤条件
+    applyFilters() {
+      this.$router.push({
+        path: this.$route.path,
+        query: {
+          ...this.searchForm,
+          page: 1  // 重置页码
+        }
+      })
+    },
+    
+    // 🎯 防抖搜索
+    debounceSearch: debounce(function() {
+      this.applyFilters()
+    }, 300),
+    
+    // 🎯 分页跳转
+    goToPage(page) {
+      this.$router.push({
+        path: this.$route.path,
+        query: {
+          ...this.$route.query,
+          page
+        }
+      })
+    }
+  },
+  
+  watch: {
+    // 🎯 监听路由变化，重新加载数据
+    '$route.query': {
+      immediate: true,
+      handler() {
+        this.syncFromRoute()
+        this.loadUsers()
+      }
+    }
+  }
+}
+</script>
+```
+- 错误处理和验证 ⚠️
+```js
+export default {
+  computed: {
+    // 🎯 安全的参数获取
+    safeUserId() {
+      const id = this.$route.params.id
+      
+      // 参数存在性检查
+      if (!id) {
+        this.$router.push('/404')
+        return null
+      }
+      
+      // 类型转换和验证
+      const numId = parseInt(id)
+      if (isNaN(numId) || numId <= 0) {
+        this.$router.push('/400')
+        return null
+      }
+      
+      return numId
+    },
+    
+    // 🎯 查询参数的默认值处理
+    searchFilters() {
+      const query = this.$route.query
+      return {
+        keyword: query.keyword || '',
+        category: query.category || 'all',
+        sortBy: ['date', 'name', 'price'].includes(query.sort) 
+          ? query.sort 
+          : 'date',
+        page: Math.max(1, parseInt(query.page) || 1),
+        limit: [10, 20, 50].includes(parseInt(query.limit)) 
+          ? parseInt(query.limit) 
+          : 20
+      }
+    }
+  }
+}
+```
+性能优化技巧 ⚡
+```js
+// 🎯 缓存计算结果
+export default {
+  computed: {
+    expensiveUserData() {
+      // 复杂的用户数据计算
+      return this.processUserData(this.$route.params.id)
+    }
+  },
+  
+  // 🎯 使用防抖处理频繁的参数变化
+  watch: {
+    '$route.query.search': {
+      handler: debounce(function(newSearch) {
+        this.performSearch(newSearch)
+      }, 300)
+    }
+  }
+}
+```
+掌握路由参数的获取方法，是Vue开发中的基本技能！记住：params用于路径参数，query用于查询参数，计算属性是最佳的响应式获取方式。
+
+:::
+## 🔥什么是动态路由匹配？如何实现？
+
+::: details
+
+动态路由匹配是Vue Router中使用参数化路径来匹配多个相似路由的技术，通过在路径中使用冒号(:)定义参数。
+
+核心概念 🎯
+- 路径参数：用:定义可变部分，如/user/:id
+- 参数获取：通过$route.params获取参数值
+- 灵活匹配：一个路由规则可以匹配多个具体路径
+```js
+// 路由配置
+const routes = [
+  { path: '/user/:id', component: User }
+]
+
+// 匹配结果
+'/user/123' → { id: '123' }
+'/user/456' → { id: '456' }
+
+// 获取参数
+const userId = this.$route.params.id
+```
+基础语法和规则 📝
+- 单参数匹配 🎯
+```js
+// 🎯 基础动态路由
+const routes = [
+  {
+    path: '/user/:id',
+    name: 'User',
+    component: UserProfile
+  }
+]
+
+// 匹配示例
+'/user/123'     // ✅ { id: '123' }
+'/user/abc'     // ✅ { id: 'abc' }
+'/user/123/456' // ❌ 不匹配
+'/user'         // ❌ 不匹配
+```
+多参数匹配 🎪
+```js
+// 🎯 多个路径参数
+const routes = [
+  {
+    path: '/user/:userId/post/:postId',
+    name: 'UserPost',
+    component: PostDetail
+  },
+  {
+    path: '/category/:type/product/:id',
+    name: 'Product',
+    component: ProductDetail
+  }
+]
+
+// 匹配示例
+'/user/123/post/456'        // ✅ { userId: '123', postId: '456' }
+'/category/electronics/product/789' // ✅ { type: 'electronics', id: '789' }
+```
+高级匹配模式 💡
+- 正则表达式约束 🔧
+```js
+// 🎯 使用正则表达式限制参数格式
+const routes = [
+  {
+    // 只匹配数字ID
+    path: '/user/:id(\\d+)',
+    name: 'User',
+    component: UserProfile
+  },
+  {
+    // 只匹配字母用户名
+    path: '/profile/:username([a-zA-Z]+)',
+    name: 'Profile',
+    component: UserProfile
+  },
+  {
+    // 自定义正则模式
+    path: '/article/:slug([a-z0-9-]+)',
+    name: 'Article',
+    component: ArticleDetail
+  }
+]
+
+// 匹配示例
+'/user/123'     // ✅ 数字ID匹配
+'/user/abc'     // ❌ 不是数字
+'/profile/john' // ✅ 字母用户名匹配
+'/profile/123'  // ❌ 不是字母
+```
+重复参数匹配 🔄
+```js
+// 🎯 匹配多个路径段
+const routes = [
+  {
+    // 匹配一个或多个段
+    path: '/files/:path+',
+    name: 'Files',
+    component: FileExplorer
+  },
+  {
+    // 匹配零个或多个段
+    path: '/docs/:path*',
+    name: 'Docs',
+    component: Documentation
+  }
+]
+
+// 匹配示例
+'/files/folder1'              // ✅ { path: ['folder1'] }
+'/files/folder1/folder2'      // ✅ { path: ['folder1', 'folder2'] }
+'/files/folder1/folder2/file.txt' // ✅ { path: ['folder1', 'folder2', 'file.txt'] }
+'/docs'                       // ✅ { path: [] }
+'/docs/guide'                 // ✅ { path: ['guide'] }
+```
+实际应用场景 🚀
+- 电商网站商品页 🛒
+```js
+<template>
+  <div class="product-detail">
+    <div v-if="loading">加载中...</div>
+    <div v-else-if="product">
+      <h1>{{ product.name }}</h1>
+      <p>分类: {{ categoryName }}</p>
+      <p>商品ID: {{ productId }}</p>
+      <p>规格: {{ selectedSpec }}</p>
+      
+      <!-- 🎯 相关商品导航 -->
+      <div class="related-products">
+        <router-link 
+          v-for="item in relatedProducts"
+          :key="item.id"
+          :to="{ 
+            name: 'Product', 
+            params: { category: categoryType, id: item.id }
+          }">
+          {{ item.name }}
+        </router-link>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+// 路由配置: /category/:category/product/:id
+export default {
+  data() {
+    return {
+      product: null,
+      relatedProducts: [],
+      loading: false
+    }
+  },
+  
+  computed: {
+    // 🎯 从路由参数获取分类
+    categoryType() {
+      return this.$route.params.category
+    },
+    
+    // 🎯 从路由参数获取商品ID
+    productId() {
+      return this.$route.params.id
+    },
+    
+    // 🎯 从查询参数获取规格
+    selectedSpec() {
+      return this.$route.query.spec || 'default'
+    },
+    
+    // 🎯 分类名称映射
+    categoryName() {
+      const categories = {
+        'electronics': '电子产品',
+        'clothing': '服装',
+        'books': '图书'
+      }
+      return categories[this.categoryType] || '未知分类'
+    }
+  },
+  
+  methods: {
+    async loadProduct() {
+      this.loading = true
+      try {
+        // 🎯 根据分类和ID加载商品
+        this.product = await this.fetchProduct(
+          this.categoryType, 
+          this.productId
+        )
+        this.relatedProducts = await this.fetchRelatedProducts(
+          this.categoryType
+        )
+      } catch (error) {
+        this.$router.push('/404')
+      } finally {
+        this.loading = false
+      }
+    }
+  },
+  
+  watch: {
+    // 🎯 监听路由参数变化
+    '$route.params': {
+      immediate: true,
+      handler() {
+        this.loadProduct()
+      }
+    }
+  }
+}
+</script>
+```
+- 用户管理系统 👥
+```js
+<template>
+  <div class="user-management">
+    <!-- 🎯 面包屑导航 -->
+    <nav class="breadcrumb">
+      <router-link to="/admin">管理后台</router-link>
+      <span>></span>
+      <router-link to="/admin/users">用户管理</router-link>
+      <span>></span>
+      <span v-if="isUserDetail">用户详情 {{ userId }}</span>
+      <span v-else-if="isUserEdit">编辑用户 {{ userId }}</span>
+    </nav>
+    
+    <!-- 🎯 用户操作导航 -->
+    <div class="user-tabs" v-if="userId">
+      <router-link 
+        :to="{ name: 'UserDetail', params: { id: userId }}"
+        :class="{ active: currentAction === 'detail' }">
+        基本信息
+      </router-link>
+      <router-link 
+        :to="{ name: 'UserEdit', params: { id: userId }}"
+        :class="{ active: currentAction === 'edit' }">
+        编辑资料
+      </router-link>
+      <router-link 
+        :to="{ name: 'UserOrders', params: { id: userId }}"
+        :class="{ active: currentAction === 'orders' }">
+        订单历史
+      </router-link>
+    </div>
+    
+    <!-- 🎯 内容区域 -->
+    <router-view />
+  </div>
+</template>
+
+<script>
+export default {
+  computed: {
+    // 🎯 获取用户ID
+    userId() {
+      return this.$route.params.id
+    },
+    
+    // 🎯 获取当前操作类型
+    currentAction() {
+      return this.$route.params.action
+    },
+    
+    // 🎯 判断是否为用户详情页
+    isUserDetail() {
+      return this.$route.name === 'UserDetail'
+    },
+    
+    // 🎯 判断是否为用户编辑页
+    isUserEdit() {
+      return this.$route.name === 'UserEdit'
+    }
+  }
+}
+
+// 🎯 路由配置
+const routes = [
+  {
+    path: '/admin/users/:id',
+    name: 'UserDetail',
+    component: UserDetail
+  },
+  {
+    path: '/admin/users/:id/edit',
+    name: 'UserEdit',
+    component: UserEdit
+  },
+  {
+    path: '/admin/users/:id/orders',
+    name: 'UserOrders',
+    component: UserOrders
+  }
+]
+</script>
+```
+匹配优先级和注意事项 ⚠️
+```js
+// 🎯 路由定义顺序很重要
+const routes = [
+  // ✅ 静态路由放在前面
+  { path: '/user/profile', component: UserProfile },
+  { path: '/user/settings', component: UserSettings },
+  
+  // ✅ 动态路由放在后面
+  { path: '/user/:id', component: UserDetail },
+  
+  // ❌ 错误：这个规则永远不会被匹配到
+  { path: '/user/admin', component: AdminPanel }
+]
+```
+- 参数验证和错误处理 🔧
+```js
+export default {
+  computed: {
+    validUserId() {
+      const id = this.$route.params.id
+      
+      // 🎯 参数验证
+      if (!id) return null
+      
+      const numId = parseInt(id)
+      if (isNaN(numId) || numId <= 0) {
+        // 无效ID，跳转到错误页面
+        this.$router.replace('/404')
+        return null
+      }
+      
+      return numId
+    }
+  },
+  
+  watch: {
+    validUserId: {
+      immediate: true,
+      handler(id) {
+        if (id) {
+          this.loadUserData(id)
+        }
+      }
+    }
+  }
+}
+```
+Vue 3动态路由用法 💫
+```vue
+<script setup>
+import { useRoute, useRouter } from 'vue-router'
+import { computed, watch } from 'vue'
+
+const route = useRoute()
+const router = useRouter()
+
+// 🎯 响应式参数获取
+const articleId = computed(() => route.params.id)
+const categorySlug = computed(() => route.params.category)
+
+// 🎯 参数验证
+const validArticleId = computed(() => {
+  const id = parseInt(articleId.value)
+  return !isNaN(id) && id > 0 ? id : null
+})
+
+// 🎯 监听参数变化
+watch(validArticleId, async (newId) => {
+  if (newId) {
+    await loadArticle(newId)
+  } else {
+    router.push('/404')
+  }
+}, { immediate: true })
+
+// 🎯 导航到相关文章
+const goToRelatedArticle = (id) => {
+  router.push({
+    name: 'Article',
+    params: {
+      category: categorySlug.value,
+      id: id
+    }
+  })
+}
+</script>
+```
+性能优化建议 ⚡
+
+优化策略	实现方法	效果
+参数缓存	使用computed缓存解析结果	🚀 减少重复计算
+路由懒加载	动态import组件	🚀 按需加载
+参数验证	早期验证，快速失败	🚀 避免无效请求
+预加载	预获取相关数据	🚀 提升用户体验
+
+```js
+// 🎯 性能优化示例
+export default {
+  computed: {
+    // 缓存参数解析
+    parsedParams() {
+      return {
+        userId: parseInt(this.$route.params.id),
+        category: this.$route.params.category,
+        page: parseInt(this.$route.query.page) || 1
+      }
+    }
+  },
+  
+  asyncData({ params }) {
+    // 🎯 SSR中的参数处理
+    return {
+      user: await fetchUser(params.id),
+      posts: await fetchUserPosts(params.id)
+    }
+  }
+}
+```
+动态路由匹配是Vue Router的核心特性，掌握它就能构建出灵活且用户友好的单页应用！记住：合理的路由设计不仅能提升用户体验，还能让代码更加优雅和可维护。
+
+
+::: 
+## 什么是嵌套路由？如何配置？
+
+::: details
+嵌套路由是Vue Router中通过children属性实现路由层级嵌套的功能，允许在父组件内部渲染子路由组件。
+
+核心概念 🎯
+- 父子关系：路由之间存在层级关系，子路由在父路由内部渲染
+- children配置：通过children数组定义子路由
+- 多级router-view：父组件包含<router-view/>来渲染子组件
+- 基础配置 ⚡
+```js
+const routes = [
+  {
+    path: '/admin',
+    component: AdminLayout,
+    children: [
+      { path: '', component: Dashboard },        // /admin
+      { path: 'users', component: UserList },    // /admin/users
+      { path: 'settings', component: Settings }  // /admin/settings
+    ]
+  }
+]
+```
+使用场景 📋
+- 管理后台、用户中心、多级菜单等需要保持公共布局的页面结构。
+
+详细解析📚
+- 嵌套路由结构图 🏗️
+- 基础配置详解 📋
+- 完整路由配置 🎯
+```js
+// router/index.js
+import { createRouter, createWebHistory } from 'vue-router'
+
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home.vue')
+  },
+  {
+    path: '/admin',
+    component: () => import('@/layouts/AdminLayout.vue'),
+    // 🎯 重定向到默认子路由
+    redirect: '/admin/dashboard',
+    children: [
+      {
+        path: 'dashboard',  // 注意：子路由路径不加 /
+        name: 'Dashboard',
+        component: () => import('@/views/admin/Dashboard.vue')
+      },
+      {
+        path: 'users',
+        name: 'UserManagement',
+        component: () => import('@/views/admin/UserList.vue')
+      },
+      {
+        path: 'users/:id',
+        name: 'UserDetail',
+        component: () => import('@/views/admin/UserDetail.vue')
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/admin/Settings.vue')
+      }
+    ]
+  }
+]
+
+export default createRouter({
+  history: createWebHistory(),
+  routes
+})
+```
+父组件布局实现 🎨
+```vue
+<!-- layouts/AdminLayout.vue -->
+<template>
+  <div class="admin-layout">
+    <!-- 🎯 公共头部 -->
+    <header class="admin-header">
+      <div class="logo">管理后台</div>
+      <nav class="main-nav">
+        <router-link to="/admin/dashboard">仪表盘</router-link>
+        <router-link to="/admin/users">用户管理</router-link>
+        <router-link to="/admin/settings">系统设置</router-link>
+      </nav>
+      <div class="user-info">
+        <span>欢迎，{{ currentUser.name }}</span>
+      </div>
+    </header>
+    
+    <!-- 🎯 主要内容区域 -->
+    <div class="admin-main">
+      <!-- 侧边栏 -->
+      <aside class="admin-sidebar">
+        <nav class="sidebar-nav">
+          <div class="nav-group">
+            <h3>数据统计</h3>
+            <router-link to="/admin/dashboard" exact>
+              <Icon name="dashboard" />
+              仪表盘
+            </router-link>
+          </div>
+          
+          <div class="nav-group">
+            <h3>用户管理</h3>
+            <router-link to="/admin/users">
+              <Icon name="users" />
+              用户列表
+            </router-link>
+            <router-link to="/admin/users/create">
+              <Icon name="user-plus" />
+              添加用户
+            </router-link>
+          </div>
+          
+          <div class="nav-group">
+            <h3>系统管理</h3>
+            <router-link to="/admin/settings">
+              <Icon name="settings" />
+              系统设置
+            </router-link>
+          </div>
+        </nav>
+      </aside>
+      
+      <!-- 🎯 子路由渲染区域 -->
+      <main class="admin-content">
+        <!-- 面包屑导航 -->
+        <nav class="breadcrumb">
+          <router-link to="/admin">首页</router-link>
+          <span class="separator">></span>
+          <span>{{ $route.meta.title || $route.name }}</span>
+        </nav>
+        
+        <!-- 子组件渲染出口 -->
+        <router-view />
+      </main>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const currentUser = { name: 'Admin' }
+
+// 🎯 动态计算当前页面标题
+const pageTitle = computed(() => {
+  return route.meta?.title || route.name || '管理后台'
+})
+</script>
+
+<style scoped>
+.admin-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.admin-header {
+  height: 60px;
+  background: #001529;
+  color: white;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.admin-main {
+  flex: 1;
+  display: flex;
+}
+
+.admin-sidebar {
+  width: 250px;
+  background: #f0f2f5;
+  padding: 20px 0;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 20px;
+  background: white;
+}
+
+.router-link-active {
+  background-color: #1890ff;
+  color: white;
+}
+</style>
+```
+- 多级嵌套路由 🎪
+- 三级路由配置 📊
+```js
+const routes = [
+  {
+    path: '/admin',
+    component: AdminLayout,
+    children: [
+      {
+        path: 'users',
+        component: UserLayout,  // 🎯 二级布局组件
+        children: [
+          {
+            path: '',
+            name: 'UserList',
+            component: UserList
+          },
+          {
+            path: ':id',
+            component: UserDetailLayout,  // 🎯 三级布局组件
+            children: [
+              {
+                path: '',
+                name: 'UserProfile',
+                component: UserProfile
+              },
+              {
+                path: 'edit',
+                name: 'UserEdit',
+                component: UserEdit
+              },
+              {
+                path: 'orders',
+                name: 'UserOrders',
+                component: UserOrders
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
+
+// URL结构：
+// /admin/users              → UserList
+// /admin/users/123          → UserProfile
+// /admin/users/123/edit     → UserEdit
+// /admin/users/123/orders   → UserOrders
+```
+二级布局组件 🔧
+```vue
+<!-- components/UserLayout.vue -->
+<template>
+  <div class="user-layout">
+    <!-- 🎯 用户管理专用工具栏 -->
+    <div class="user-toolbar">
+      <div class="toolbar-left">
+        <h2>用户管理</h2>
+        <div class="quick-actions">
+          <router-link to="/admin/users" class="btn btn-primary">
+            <Icon name="list" />
+            用户列表
+          </router-link>
+          <router-link to="/admin/users/create" class="btn btn-success">
+            <Icon name="plus" />
+            添加用户
+          </router-link>
+        </div>
+      </div>
+      
+      <div class="toolbar-right">
+        <input 
+          type="search" 
+          placeholder="搜索用户..."
+          @input="handleSearch">
+      </div>
+    </div>
+    
+    <!-- 🎯 用户管理子路由出口 -->
+    <div class="user-content">
+      <router-view />
+    </div>
+  </div>
+</template>
+```
+实际应用场景 🚀
+- 电商管理后台 🛒
+```vue
+<!-- 商品管理嵌套路由示例 -->
+<template>
+  <div class="product-management">
+    <!-- 🎯 商品管理导航 -->
+    <nav class="product-nav">
+      <router-link to="/admin/products" exact>商品列表</router-link>
+      <router-link to="/admin/products/categories">分类管理</router-link>
+      <router-link to="/admin/products/inventory">库存管理</router-link>
+      <router-link to="/admin/products/analytics">销售分析</router-link>
+    </nav>
+    
+    <!-- 🎯 当前路径显示 -->
+    <div class="current-path">
+      <span>当前位置：{{ currentPath }}</span>
+    </div>
+    
+    <!-- 🎯 商品管理内容区域 -->
+    <div class="product-content">
+      <router-view />
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  computed: {
+    currentPath() {
+      const pathMap = {
+        '/admin/products': '商品列表',
+        '/admin/products/categories': '分类管理',
+        '/admin/products/inventory': '库存管理',
+        '/admin/products/analytics': '销售分析'
+      }
+      return pathMap[this.$route.path] || '商品管理'
+    }
+  }
+}
+
+// 🎯 对应的路由配置
+const routes = [
+  {
+    path: '/admin',
+    component: AdminLayout,
+    children: [
+      {
+        path: 'products',
+        component: ProductLayout,
+        children: [
+          { path: '', name: 'ProductList', component: ProductList },
+          { path: 'categories', name: 'Categories', component: CategoryManagement },
+          { path: 'inventory', name: 'Inventory', component: InventoryManagement },
+          { path: 'analytics', name: 'Analytics', component: SalesAnalytics },
+          {
+            path: ':id',
+            name: 'ProductDetail',
+            component: ProductDetail,
+            children: [
+              { path: '', name: 'ProductInfo', component: ProductInfo },
+              { path: 'edit', name: 'ProductEdit', component: ProductEdit },
+              { path: 'variants', name: 'ProductVariants', component: ProductVariants }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
+</script>
+```
+用户中心模块 👤
+```vue
+<!-- 用户中心嵌套路由 -->
+<template>
+  <div class="user-center">
+    <!-- 🎯 用户信息卡片 -->
+    <div class="user-card">
+      <img :src="userInfo.avatar" alt="头像" class="avatar">
+      <div class="user-info">
+        <h3>{{ userInfo.name }}</h3>
+        <p>{{ userInfo.email }}</p>
+      </div>
+    </div>
+    
+    <!-- 🎯 功能导航标签 -->
+    <nav class="user-tabs">
+      <router-link to="/user/profile" class="tab">
+        <Icon name="user" />
+        个人资料
+      </router-link>
+      <router-link to="/user/orders" class="tab">
+        <Icon name="shopping-bag" />
+        我的订单
+      </router-link>
+      <router-link to="/user/favorites" class="tab">
+        <Icon name="heart" />
+        我的收藏
+      </router-link>
+      <router-link to="/user/addresses" class="tab">
+        <Icon name="map-pin" />
+        收货地址
+      </router-link>
+      <router-link to="/user/security" class="tab">
+        <Icon name="shield" />
+        安全设置
+      </router-link>
+    </nav>
+    
+    <!-- 🎯 内容区域 -->
+    <div class="user-content">
+      <router-view />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+const userInfo = ref({
+  name: '张三',
+  email: 'zhangsan@example.com',
+  avatar: '/avatar.jpg'
+})
+</script>
+```
+```js
+const routes = [
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: { 
+      requiresAuth: true,
+      title: '管理后台'
+    },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: Dashboard,
+        meta: { 
+          title: '仪表盘',
+          icon: 'dashboard',
+          breadcrumb: ['管理后台', '仪表盘']
+        }
+      },
+      {
+        path: 'users',
+        name: 'UserManagement',
+        component: UserList,
+        meta: { 
+          title: '用户管理',
+          icon: 'users',
+          permissions: ['user:read'],
+          breadcrumb: ['管理后台', '用户管理']
+        }
+      }
+    ]
+  }
+]
+```
+常见问题解决 🔧
+默认子路由配置 ⚡
+```js
+// ❌ 错误配置
+{
+  path: '/admin',
+  component: AdminLayout,
+  children: [
+    { path: '/', component: Dashboard }  // 错误：不要在子路由使用绝对路径
+  ]
+}
+
+// ✅ 正确配置
+{
+  path: '/admin',
+  component: AdminLayout,
+  children: [
+    { path: '', component: Dashboard }   // 空字符串表示默认子路由
+  ]
+}
+
+// ✅ 或者使用重定向
+{
+  path: '/admin',
+  component: AdminLayout,
+  redirect: '/admin/dashboard',
+  children: [
+    { path: 'dashboard', component: Dashboard }
+  ]
+}
+```
+动态面包屑生成 🍞
+``` vue
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// 🎯 根据路由元信息生成面包屑
+const breadcrumbs = computed(() => {
+  const matched = route.matched.filter(item => item.meta?.title)
+  return matched.map(item => ({
+    title: item.meta.title,
+    path: item.path,
+    name: item.name
+  }))
+})
+</script>
+
+<template>
+  <nav class="breadcrumb">
+    <router-link 
+      v-for="(crumb, index) in breadcrumbs"
+      :key="crumb.name"
+      :to="crumb.path"
+      :class="{ 'is-active': index === breadcrumbs.length - 1 }">
+      {{ crumb.title }}
+      <span v-if="index < breadcrumbs.length - 1" class="separator">></span>
+    </router-link>
+  </nav>
+</template>
+```
+性能优化建议 🚀
+``` js
+// 🎯 路由懒加载配置
+const routes = [
+  {
+    path: '/admin',
+    component: () => import('@/layouts/AdminLayout.vue'),
+    children: [
+      {
+        path: 'dashboard',
+        component: () => import(
+          /* webpackChunkName: "admin-dashboard" */
+          '@/views/admin/Dashboard.vue'
+        )
+      },
+      {
+        path: 'users',
+        component: () => import(
+          /* webpackChunkName: "admin-users" */
+          '@/views/admin/UserManagement.vue'
+        )
+      }
+    ]
+  }
+]
+```
+嵌套路由是构建复杂应用布局的强大工具，通过合理的路由层级设计，可以创建出结构清晰、用户体验优秀的应用！掌握嵌套路由，就掌握了现代Web应用架构设计的核心技能。
+
+:::
+## 如何实现路由懒加载？有什么好处？
+::: details
+
+路由懒加载是通过动态import()实现按需加载路由组件的技术，将大型应用拆分成多个代码块。
+
+实现方式 🎯
+```js
+// 懒加载写法
+const Home = () => import('@/views/Home.vue')
+
+// 路由配置
+{
+  path: '/home',
+  component: () => import('@/views/Home.vue')
+}
+```
+核心好处 ⚡
+减少首屏加载时间：只加载当前需要的代码
+按需加载：用户访问时才下载对应组件
+代码分割：Webpack自动生成独立的chunk文件
+用户体验提升：应用启动更快，响应更及时
+关键原理 📋
+利用ES2020的动态import()和Webpack的代码分割功能，将路由组件打包成独立文件，实现运行时按需加载。
+
+
+实现方式对比 📊
+传统同步加载 ❌
+```js
+// 传统方式 - 同步加载
+import Home from '@/views/Home.vue'
+import About from '@/views/About.vue'
+import User from '@/views/User.vue'
+import Product from '@/views/Product.vue'
+
+const routes = [
+  { path: '/', component: Home },
+  { path: '/about', component: About },
+  { path: '/user', component: User },
+  { path: '/product', component: Product }
+]
+
+// 问题：所有组件都会打包到main.js中
+// 结果：首屏加载包含所有页面代码，体积巨大
+```
+路由懒加载实现 ✅
+```js
+// 🎯 方式1：函数式动态import
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home.vue')
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/About.vue')
+  },
+  {
+    path: '/user/:id',
+    name: 'User',
+    component: () => import('@/views/User.vue')
+  }
+]
+
+// 🎯 方式2：赋值给变量
+const Home = () => import('@/views/Home.vue')
+const About = () => import('@/views/About.vue')
+
+const routes = [
+  { path: '/', component: Home },
+  { path: '/about', component: About }
+]
+```
+Webpack代码分割配置 🔧
+自定义chunk名称 📦
+```js
+const routes = [
+  {
+    path: '/admin',
+    component: () => import(
+      /* webpackChunkName: "admin" */
+      '@/views/admin/AdminPanel.vue'
+    )
+  },
+  {
+    path: '/user',
+    component: () => import(
+      /* webpackChunkName: "user" */
+      '@/views/user/UserProfile.vue'
+    )
+  },
+  {
+    path: '/product',
+    component: () => import(
+      /* webpackChunkName: "product" */
+      '@/views/product/ProductDetail.vue'
+    )
+  }
+]
+
+// 打包结果：
+// admin.chunk.js    - 管理员相关页面
+// user.chunk.js     - 用户相关页面  
+// product.chunk.js  - 商品相关页面
+```
+分组打包策略 🎪
+```js
+// 🎯 按功能模块分组
+const routes = [
+  // 管理员模块 - 打包到admin组
+  {
+    path: '/admin/dashboard',
+    component: () => import(
+      /* webpackChunkName: "admin" */
+      '@/views/admin/Dashboard.vue'
+    )
+  },
+  {
+    path: '/admin/users',
+    component: () => import(
+      /* webpackChunkName: "admin" */
+      '@/views/admin/UserManagement.vue'
+    )
+  },
+  
+  // 用户模块 - 打包到user组
+  {
+    path: '/profile',
+    component: () => import(
+      /* webpackChunkName: "user" */
+      '@/views/UserProfile.vue'
+    )
+  },
+  {
+    path: '/settings',
+    component: () => import(
+      /* webpackChunkName: "user" */
+      '@/views/UserSettings.vue'
+    )
+  }
+]
+```
+
+```js
+// 🎯 电商网站的路由懒加载配置
+const routes = [
+  // 首页 - 立即加载（用户首先访问）
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home.vue')
+  },
+  
+  // 商品相关 - 按需加载
+  {
+    path: '/products',
+    component: () => import(
+      /* webpackChunkName: "product" */
+      '@/views/ProductList.vue'
+    )
+  },
+  {
+    path: '/product/:id',
+    component: () => import(
+      /* webpackChunkName: "product" */
+      '@/views/ProductDetail.vue'
+    )
+  },
+  
+  // 用户中心 - 登录后才需要
+  {
+    path: '/profile',
+    component: () => import(
+      /* webpackChunkName: "user" */
+      '@/views/UserProfile.vue'
+    )
+  },
+  {
+    path: '/orders',
+    component: () => import(
+      /* webpackChunkName: "user" */
+      '@/views/OrderHistory.vue'
+    )
+  },
+  
+  // 购物车和结算 - 高频但非首屏
+  {
+    path: '/cart',
+    component: () => import(
+      /* webpackChunkName: "cart" */
+      '@/views/ShoppingCart.vue'
+    )
+  },
+  {
+    path: '/checkout',
+    component: () => import(
+      /* webpackChunkName: "cart" */
+      '@/views/Checkout.vue'
+    )
+  },
+  
+  // 管理后台 - 权限限制，独立打包
+  {
+    path: '/admin',
+    component: () => import(
+      /* webpackChunkName: "admin" */
+      '@/views/admin/AdminLayout.vue'
+    ),
+    children: [
+      {
+        path: 'dashboard',
+        component: () => import(
+          /* webpackChunkName: "admin" */
+          '@/views/admin/Dashboard.vue'
+        )
+      }
+    ]
+  }
+]
+```
+大型企业应用策略 🏢
+```js
+// 🎯 大型企业应用的模块化懒加载
+const routes = [
+  // 核心功能 - 预加载
+  {
+    path: '/dashboard',
+    component: () => import(
+      /* webpackChunkName: "core" */
+      /* webpackPreload: true */
+      '@/views/Dashboard.vue'
+    )
+  },
+  
+  // 人力资源模块
+  {
+    path: '/hr',
+    component: () => import(
+      /* webpackChunkName: "hr-module" */
+      '@/modules/hr/HRLayout.vue'
+    ),
+    children: [
+      {
+        path: 'employees',
+        component: () => import(
+          /* webpackChunkName: "hr-module" */
+          '@/modules/hr/EmployeeManagement.vue'
+        )
+      },
+      {
+        path: 'attendance',
+        component: () => import(
+          /* webpackChunkName: "hr-module" */
+          '@/modules/hr/AttendanceSystem.vue'
+        )
+      }
+    ]
+  },
+  
+  // 财务模块
+  {
+    path: '/finance',
+    component: () => import(
+      /* webpackChunkName: "finance-module" */
+      '@/modules/finance/FinanceLayout.vue'
+    ),
+    children: [
+      {
+        path: 'reports',
+        component: () => import(
+          /* webpackChunkName: "finance-module" */
+          '@/modules/finance/FinancialReports.vue'
+        )
+      }
+    ]
+  }
+]
+```
+高级优化技巧 💡
+预加载和预获取 🎯
+```js
+// 🎯 预加载 - 立即下载但不执行
+{
+  path: '/important',
+  component: () => import(
+    /* webpackPreload: true */
+    '@/views/ImportantPage.vue'
+  )
+}
+
+// 🎯 预获取 - 空闲时间下载
+{
+  path: '/optional',
+  component: () => import(
+    /* webpackPrefetch: true */
+    '@/views/OptionalPage.vue'
+  )
+}
+```
+条件懒加载 🔀
+```js
+// 🎯 根据用户权限决定是否懒加载
+const createUserRoutes = (userRole) => {
+  const routes = [
+    {
+      path: '/profile',
+      component: () => import('@/views/UserProfile.vue')
+    }
+  ]
+  
+  // 只有管理员才需要加载管理模块
+  if (userRole === 'admin') {
+    routes.push({
+      path: '/admin',
+      component: () => import(
+        /* webpackChunkName: "admin" */
+        '@/views/AdminPanel.vue'
+      )
+    })
+  }
+  
+  return routes
+}
+```
+错误处理和重试机制 ⚠️
+```js
+// 🎯 懒加载错误处理
+const lazyLoad = (componentPath) => {
+  return () => 
+    import(componentPath)
+      .catch(() => {
+        // 加载失败时的降级处理
+        console.error(`Failed to load component: ${componentPath}`)
+        return import('@/views/ErrorPage.vue')
+      })
+}
+
+const routes = [
+  {
+    path: '/user',
+    component: lazyLoad('@/views/UserProfile.vue')
+  }
+]
+```
+监控和分析 📊
+- Webpack Bundle Analyzer 🔍
+```bash
+# 安装分析工具
+npm install --save-dev webpack-bundle-analyzer
+
+# 分析打包结果
+npm run build --report
+```
+加载性能监控 📈
+```js
+// 🎯 监控懒加载性能
+const trackRouteLoad = (routeName) => {
+  const startTime = performance.now()
+  
+  return () => 
+    import(`@/views/${routeName}.vue`)
+      .then(component => {
+        const loadTime = performance.now() - startTime
+        console.log(`Route ${routeName} loaded in ${loadTime}ms`)
+        
+        // 发送性能数据到监控系统
+        analytics.track('route_load_time', {
+          route: routeName,
+          loadTime: loadTime
+        })
+        
+        return component
+      })
+}
+```
+最佳实践总结 🎪
+懒加载策略选择 📋
+```js
+// 🎯 根据页面重要性分级加载
+const routeConfig = {
+  // 🔴 关键页面 - 预加载
+  critical: [
+    { path: '/', preload: true },
+    { path: '/login', preload: true }
+  ],
+  
+  // 🟡 重要页面 - 懒加载但分组
+  important: [
+    { path: '/dashboard', chunk: 'core' },
+    { path: '/profile', chunk: 'user' }
+  ],
+  
+  // 🟢 普通页面 - 独立懒加载
+  normal: [
+    { path: '/settings', chunk: 'settings' },
+    { path: '/help', chunk: 'help' }
+  ],
+  
+  // ⚪ 低频页面 - 按需加载
+  rare: [
+    { path: '/admin', chunk: 'admin' },
+    { path: '/reports', chunk: 'reports' }
+  ]
+}
+```
+性能优化检查清单 ✅
+- ✅ 首屏路由使用预加载或同步加载
+- ✅ 按功能模块分组打包相关页面
+- ✅ 低频页面独立打包避免影响常用功能
+- ✅ 重要页面使用prefetch预获取
+- ✅ 配置合理的缓存策略
+- ✅ 监控加载性能及时优化
+路由懒加载是现代前端应用的标配优化技术，合理的懒加载策略可以显著提升应用的首屏性能和用户体验！掌握这项技术，你就能构建出快速响应的大型应用。
+
+:::
+## Vue Router的导航守卫有哪些？分别什么时候执行？
+::: details
+
+Vue Router导航守卫分为三大类型，按特定顺序在路由跳转过程中执行。
+
+三大类型 🎯
+ 全局守卫：应用于所有路由的守卫 
+- beforeEach：全局前置守卫
+- beforeResolve：全局解析守卫
+- afterEach：全局后置钩子 
+
+ 路由独享守卫：单个路由配置的守卫 
+
+- beforeEnter：进入路由前执行 
+
+组件内守卫：组件内部定义的守卫 
+- beforeRouteEnter：进入组件前
+- beforeRouteUpdate：路由参数变化时
+- beforeRouteLeave：离开组件前 
+
+执行顺序 ⚡ 
+
+ 离开组件 → 全局beforeEach → 路由beforeEnter → 进入组件beforeRouteEnter → 全局beforeResolve → 确认导航 → 全局afterEach
+
+详细解析📚 
+
+导航守卫执行流程 🔄 
+
+全局守卫详解 🌍 
+
+beforeEach - 全局前置守卫 🚪 
+```js
+// 🎯 最常用的导航守卫，用于权限验证
+router.beforeEach((to, from, next) => {
+  console.log('全局前置守卫执行')
+  
+  // 检查是否需要登录
+  if (to.meta.requiresAuth && !isLoggedIn()) {
+    next('/login')  // 重定向到登录页
+  } else {
+    next()  // 继续导航
+  }
+})
+
+// 🎯 实际项目中的权限控制
+router.beforeEach(async (to, from, next) => {
+  // 显示loading
+  showLoading()
+  
+  const token = localStorage.getItem('token')
+  const publicPages = ['/login', '/register', '/home']
+  
+  // 公开页面直接放行
+  if (publicPages.includes(to.path)) {
+    next()
+    return
+  }
+  
+  // 需要权限的页面
+  if (!token) {
+    next('/login')
+    return
+  }
+  
+  try {
+    // 验证token有效性
+    const userInfo = await validateToken(token)
+    
+    // 检查页面权限
+    if (hasPermission(to.meta.permissions, userInfo.permissions)) {
+      next()
+    } else {
+      next('/unauthorized')
+    }
+  } catch (error) {
+    // token无效，清除并跳转登录
+    localStorage.removeItem('token')
+    next('/login')
+  }
+})
+```
+
+beforeResolve - 全局解析守卫 🔍
+```js
+// 🎯 在导航确认前，所有组件内守卫和异步路由组件解析后调用
+router.beforeResolve((to, from, next) => {
+  console.log('全局解析守卫执行')
+  
+  // 可以在这里处理一些需要等待所有守卫完成的逻辑
+  // 比如数据预取、页面访问统计等
+  
+  // 记录页面访问
+  analytics.track('page_view', {
+    page: to.path,
+    title: to.meta.title
+  })
+  
+  next()
+})
+```
+afterEach - 全局后置钩子 🏁
+```js
+// 🎯 导航确认后调用，不能改变导航
+router.afterEach((to, from) => {
+  console.log('全局后置钩子执行')
+  
+  // 隐藏loading
+  hideLoading()
+  
+  // 设置页面标题
+  document.title = to.meta.title || 'Default Title'
+  
+  // 页面统计
+  if (typeof gtag !== 'undefined') {
+    gtag('config', 'GA_MEASUREMENT_ID', {
+      page_path: to.path
+    })
+  }
+  
+  // 重置滚动位置
+  window.scrollTo(0, 0)
+})
+```
+路由独享守卫 🎯
+```js
+// 🎯 在路由配置中直接定义
+const routes = [
+  {
+    path: '/admin',
+    component: AdminPanel,
+    beforeEnter: (to, from, next) => {
+      console.log('路由独享守卫执行')
+      
+      // 检查管理员权限
+      if (hasAdminRole()) {
+        next()
+      } else {
+        next('/unauthorized')
+      }
+    }
+  },
+  {
+    path: '/vip',
+    component: VipArea,
+    beforeEnter: async (to, from, next) => {
+      // 异步权限检查
+      try {
+        const userLevel = await getUserLevel()
+        if (userLevel >= 5) {
+          next()
+        } else {
+          next('/upgrade')
+        }
+      } catch (error) {
+        next('/error')
+      }
+    }
+  }
+]
+```
+组件内守卫 🏠 
+
+beforeRouteEnter - 进入组件前 🚪
+```vue
+<script>
+export default {
+  // 🎯 进入组件前调用，此时组件实例还未创建
+  beforeRouteEnter(to, from, next) {
+    console.log('组件内守卫：beforeRouteEnter')
+    
+    // 不能访问this，因为组件实例还未创建
+    // console.log(this) // undefined
+    
+    // 数据预取
+    fetchUserData(to.params.id).then(userData => {
+      next(vm => {
+        // 通过next的回调访问组件实例
+        vm.userData = userData
+        vm.loading = false
+      })
+    }).catch(() => {
+      next('/error')
+    })
+  }
+}
+</script>
+```
+beforeRouteUpdate - 路由参数变化 🔄
+```vue
+<script>
+export default {
+  // 🎯 当前路由改变，但组件被复用时调用
+  beforeRouteUpdate(to, from, next) {
+    console.log('组件内守卫：beforeRouteUpdate')
+    
+    // 用户从 /user/1 跳转到 /user/2 时触发
+    if (to.params.id !== from.params.id) {
+      this.loading = true
+      this.loadUserData(to.params.id)
+        .then(() => {
+          this.loading = false
+          next()
+        })
+        .catch(() => {
+          next('/error')
+        })
+    } else {
+      next()
+    }
+  }
+}
+</script>
+```
+beforeRouteLeave - 离开组件前 🚶
+```vue
+<script>
+export default {
+  data() {
+    return {
+      hasUnsavedChanges: false,
+      formData: {}
+    }
+  },
+  
+  // 🎯 离开当前组件前调用
+  beforeRouteLeave(to, from, next) {
+    console.log('组件内守卫：beforeRouteLeave')
+    
+    // 检查是否有未保存的更改
+    if (this.hasUnsavedChanges) {
+      const answer = confirm('您有未保存的更改，确定要离开吗？')
+      if (answer) {
+        next()
+      } else {
+        next(false)  // 取消导航
+      }
+    } else {
+      // 清理定时器、事件监听器等
+      this.cleanup()
+      next()
+    }
+  },
+  
+  methods: {
+    cleanup() {
+      // 清理资源
+      if (this.timer) {
+        clearInterval(this.timer)
+      }
+      // 移除事件监听
+      window.removeEventListener('beforeunload', this.handleBeforeUnload)
+    }
+  }
+}
+</script>
+```
+完整执行顺序示例 📋
+```js
+// 🎯 完整的导航守卫执行示例
+// 假设从 /home 跳转到 /user/123
+
+// 1. 离开/home组件
+// Home组件的beforeRouteLeave
+
+// 2. 全局前置守卫
+router.beforeEach((to, from, next) => {
+  console.log('1. 全局前置守卫 beforeEach')
+  next()
+})
+
+// 3. 路由独享守卫
+const routes = [
+  {
+    path: '/user/:id',
+    component: UserProfile,
+    beforeEnter: (to, from, next) => {
+      console.log('2. 路由独享守卫 beforeEnter')
+      next()
+    }
+  }
+]
+
+// 4. 组件内守卫 - 进入
+// UserProfile组件的beforeRouteEnter
+
+// 5. 全局解析守卫
+router.beforeResolve((to, from, next) => {
+  console.log('3. 全局解析守卫 beforeResolve')
+  next()
+})
+
+// 6. 导航确认，开始解析异步组件
+
+// 7. 全局后置钩子
+router.afterEach((to, from) => {
+  console.log('4. 全局后置钩子 afterEach')
+})
+
+// 8. DOM更新
+
+// 9. beforeRouteEnter的next回调执行
+```
+实际应用场景 🚀
+- 完整的权限管理系统 🔐
+```js
+// 🎯 多层权限验证
+router.beforeEach(async (to, from, next) => {
+  const token = store.getters.token
+  const userInfo = store.getters.userInfo
+  
+  // 白名单页面
+  const whiteList = ['/login', '/register', '/404', '/500']
+  if (whiteList.includes(to.path)) {
+    next()
+    return
+  }
+  
+  // 检查登录状态
+  if (!token) {
+    next(`/login?redirect=${to.path}`)
+    return
+  }
+  
+  // 获取用户信息
+  if (!userInfo.id) {
+    try {
+      await store.dispatch('user/getInfo')
+    } catch (error) {
+      await store.dispatch('user/logout')
+      next('/login')
+      return
+    }
+  }
+  
+  // 检查路由权限
+  if (to.meta.roles) {
+    if (hasPermission(to.meta.roles, userInfo.roles)) {
+      next()
+    } else {
+      next('/401')
+    }
+  } else {
+    next()
+  }
+})
+```
+表单保护和数据预取 📝
+```vue
+<template>
+  <div class="edit-form">
+    <form @submit="handleSubmit">
+      <input v-model="formData.name" @input="markAsChanged">
+      <button type="submit">保存</button>
+    </form>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      formData: {},
+      originalData: {},
+      hasChanges: false,
+      loading: true
+    }
+  },
+  
+  beforeRouteEnter(to, from, next) {
+    // 🎯 数据预取
+    Promise.all([
+      fetchUserData(to.params.id),
+      fetchUserPermissions(to.params.id)
+    ]).then(([userData, permissions]) => {
+      next(vm => {
+        vm.formData = { ...userData }
+        vm.originalData = { ...userData }
+        vm.permissions = permissions
+        vm.loading = false
+      })
+    }).catch(() => {
+      next('/error')
+    })
+  },
+  
+  beforeRouteUpdate(to, from, next) {
+    // 🎯 切换用户时重新加载数据
+    if (to.params.id !== from.params.id) {
+      this.loadUserData(to.params.id).then(() => next())
+    } else {
+      next()
+    }
+  },
+  
+  beforeRouteLeave(to, from, next) {
+    // 🎯 表单保护
+    if (this.hasChanges) {
+      this.$confirm('您有未保存的更改，确定要离开吗？')
+        .then(() => next())
+        .catch(() => next(false))
+    } else {
+      next()
+    }
+  },
+  
+  methods: {
+    markAsChanged() {
+      this.hasChanges = JSON.stringify(this.formData) !== JSON.stringify(this.originalData)
+    }
+  }
+}
+</script>
+```
+Vue 3 Composition API用法 💫
+```vue
+<script setup>
+import { ref, onMounted } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
+
+const hasUnsavedChanges = ref(false)
+const userData = ref({})
+
+// 🎯 组合式API中的路由守卫
+onBeforeRouteUpdate(async (to, from) => {
+  if (to.params.id !== from.params.id) {
+    const newUserData = await fetchUserData(to.params.id)
+    userData.value = newUserData
+  }
+})
+
+onBeforeRouteLeave((to, from) => {
+  if (hasUnsavedChanges.value) {
+    const answer = window.confirm('确定要离开吗？您有未保存的更改。')
+    if (!answer) return false
+  }
+})
+</script>
+```
+常见问题和解决方案 🔧 
+
+next()函数的正确使用 ✅ 
+```js
+// ✅ 正确用法
+router.beforeEach((to, from, next) => {
+  if (condition) {
+    next()  // 继续导航
+  } else {
+    next('/login')  // 重定向
+  }
+})
+
+// ❌ 错误用法 - 没有调用next()
+router.beforeEach((to, from, next) => {
+  if (condition) {
+    // 忘记调用next()，导航会卡住
+  }
+})
+
+// ❌ 错误用法 - 多次调用next()
+router.beforeEach((to, from, next) => {
+  next()
+  next('/home')  // 错误：不能多次调用
+})
+```
+掌握Vue Router导航守卫的执行顺序和使用场景，是构建安全、用户友好的Vue应用的关键技能！合理运用这些守卫，能让你的应用在用户体验和安全性之间找到完美平衡。
+
+:::
+
+## 全局守卫、路由独享守卫、组件内守卫的使用场景？
+:::details 
+三种守卫各有明确的使用场景，按作用范围和职责分工来选择。
+
+核心使用场景 🎯
+全局守卫：应用级通用逻辑 
+
+用户登录验证、权限检查
+页面访问统计、埋点上报
+Loading状态管理、页面标题设置 
+
+路由独享守卫：特定路由的专属逻辑
+特殊权限验证（如VIP页面、管理员后台）
+特定路由的参数校验
+单个页面的访问限制 
+
+组件内守卫：组件级的业务逻辑
+数据预取和初始化
+表单未保存提醒
+组件资源清理 
+
+选择原则 📋 
+
+全局性需求用全局守卫，路由特定需求用路由守卫，组件相关需求用组件守卫。 
+
+
+详细解析📚 
+
+全局守卫使用场景 🌍 
+
+用户认证和权限管理 🔐
+```js
+// 🎯 全局前置守卫 - 最常用场景
+router.beforeEach(async (to, from, next) => {
+  // 场景1: 用户登录状态检查
+  const token = localStorage.getItem('token')
+  const publicPages = ['/login', '/register', '/home', '/about']
+  
+  if (!publicPages.includes(to.path) && !token) {
+    // 未登录用户访问受保护页面
+    next(`/login?redirect=${to.path}`)
+    return
+  }
+  
+  // 场景2: 用户权限验证
+  if (token && to.meta.requiresAuth) {
+    try {
+      const userInfo = await store.dispatch('user/getUserInfo')
+      
+      // 检查页面权限
+      if (to.meta.roles && !hasRole(userInfo.roles, to.meta.roles)) {
+        next('/unauthorized')
+        return
+      }
+      
+      next()
+    } catch (error) {
+      // token失效，清除并重新登录
+      localStorage.removeItem('token')
+      next('/login')
+    }
+  } else {
+    next()
+  }
+})
+
+// 🎯 全局后置钩子 - 通用处理
+router.afterEach((to, from) => {
+  // 场景3: 页面标题管理
+  document.title = to.meta.title ? `${to.meta.title} - 我的应用` : '我的应用'
+  
+  // 场景4: 页面访问统计
+  analytics.track('page_view', {
+    page_title: to.meta.title,
+    page_path: to.path,
+    referrer: from.path
+  })
+  
+  // 场景5: 隐藏全局Loading
+  hideGlobalLoading()
+})
+```
+多语言和主题管理 🌐
+```js
+// 🎯 全局守卫处理应用级配置
+router.beforeEach((to, from, next) => {
+  // 场景6: 多语言处理
+  const locale = to.params.locale || getDefaultLocale()
+  if (locale !== getCurrentLocale()) {
+    setLocale(locale)
+  }
+  
+  // 场景7: 主题切换
+  if (to.meta.theme) {
+    document.body.className = `theme-${to.meta.theme}`
+  }
+  
+  // 场景8: 页面Meta信息
+  updateMetaTags(to.meta)
+  
+  next()
+})
+```
+路由独享守卫使用场景 🎯 
+
+特殊权限和业务限制 👑
+```js
+const routes = [
+  {
+    path: '/admin',
+    component: AdminPanel,
+    // 🎯 场景1: 管理员专属验证
+    beforeEnter: async (to, from, next) => {
+      const userInfo = store.getters.userInfo
+      
+      if (!userInfo.isAdmin) {
+        ElMessage.error('需要管理员权限')
+        next('/home')
+        return
+      }
+      
+      // 检查管理员级别
+      if (to.path.includes('/admin/system') && userInfo.adminLevel < 3) {
+        next('/admin/dashboard')
+        return
+      }
+      
+      next()
+    }
+  },
+  
+  {
+    path: '/vip',
+    component: VipArea,
+    // 🎯 场景2: VIP会员验证
+    beforeEnter: async (to, from, next) => {
+      try {
+        const memberInfo = await api.getMemberInfo()
+        
+        if (!memberInfo.isVip) {
+          // 非VIP用户，展示升级提示
+          showUpgradeDialog()
+          next('/membership')
+          return
+        }
+        
+        if (memberInfo.expireDate < new Date()) {
+          ElMessage.warning('VIP已过期，请续费')
+          next('/renew')
+          return
+        }
+        
+        next()
+      } catch (error) {
+        next('/error')
+      }
+    }
+  },
+  
+  {
+    path: '/beta/:feature',
+    component: BetaFeature,
+    // 🎯 场景3: 测试功能访问控制
+    beforeEnter: (to, from, next) => {
+      const userInfo = store.getters.userInfo
+      const feature = to.params.feature
+      
+      // 检查用户是否在beta测试名单中
+      if (!userInfo.betaFeatures.includes(feature)) {
+        ElMessage.info('该功能正在内测中')
+        next('/home')
+        return
+      }
+      
+      // 记录beta功能访问
+      analytics.track('beta_feature_access', {
+        feature: feature,
+        userId: userInfo.id
+      })
+      
+      next()
+    }
+  }
+]
+```
+特定业务规则验证 📋 
+
+```js
+const routes = [
+  {
+    path: '/exam/:id',
+    component: ExamPage,
+    // 🎯 场景4: 考试规则验证
+    beforeEnter: async (to, from, next) => {
+      const examId = to.params.id
+      
+      try {
+        const exam = await api.getExamInfo(examId)
+        const userStatus = await api.getUserExamStatus(examId)
+        
+        // 检查考试是否开放
+        if (exam.status !== 'active') {
+          ElMessage.error('考试尚未开始或已结束')
+          next('/exams')
+          return
+        }
+        
+        // 检查用户是否已完成
+        if (userStatus.completed) {
+          ElMessage.info('您已完成此考试')
+          next(`/exam/${examId}/result`)
+          return
+        }
+        
+        // 检查剩余次数
+        if (userStatus.attempts >= exam.maxAttempts) {
+          ElMessage.error('考试次数已用完')
+          next('/exams')
+          return
+        }
+        
+        next()
+      } catch (error) {
+        next('/error')
+      }
+    }
+  }
+]
+```
+组件内守卫使用场景 🏠 
+
+数据预取和组件初始化 📡
+``` vue
+<script>
+export default {
+  name: 'UserProfile',
+  
+  // 🎯 场景1: 数据预取
+  beforeRouteEnter(to, from, next) {
+    const userId = to.params.id
+    
+    // 并行获取用户数据
+    Promise.all([
+      api.getUserInfo(userId),
+      api.getUserPosts(userId),
+      api.getUserFollowers(userId)
+    ]).then(([userInfo, posts, followers]) => {
+      next(vm => {
+        // 组件实例创建后设置数据
+        vm.userInfo = userInfo
+        vm.posts = posts
+        vm.followers = followers
+        vm.loading = false
+      })
+    }).catch(error => {
+      if (error.status === 404) {
+        next('/user-not-found')
+      } else {
+        next('/error')
+      }
+    })
+  },
+  
+  // 🎯 场景2: 路由参数变化处理
+  beforeRouteUpdate(to, from, next) {
+    const newUserId = to.params.id
+    const oldUserId = from.params.id
+    
+    if (newUserId !== oldUserId) {
+      // 用户ID变化，重新加载数据
+      this.loading = true
+      this.loadUserData(newUserId)
+        .then(() => {
+          this.loading = false
+          next()
+        })
+        .catch(() => {
+          next('/error')
+        })
+    } else {
+      // 只是查询参数变化，直接继续
+      next()
+    }
+  },
+  
+  // 🎯 场景3: 组件清理和保护
+  beforeRouteLeave(to, from, next) {
+    // 清理定时器
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer)
+    }
+    
+    // 取消未完成的请求
+    if (this.cancelTokenSource) {
+      this.cancelTokenSource.cancel('Route changed')
+    }
+    
+    next()
+  }
+}
+</script>
+```
+表单保护和状态管理 📝 
+
+```vue
+<script>
+export default {
+  name: 'ArticleEditor',
+  
+  data() {
+    return {
+      article: {
+        title: '',
+        content: '',
+        tags: []
+      },
+      originalArticle: {},
+      hasUnsavedChanges: false,
+      autoSaveTimer: null
+    }
+  },
+  
+  // 🎯 场景4: 编辑器数据初始化
+  beforeRouteEnter(to, from, next) {
+    if (to.params.id === 'new') {
+      // 新建文章
+      next(vm => {
+        vm.initNewArticle()
+      })
+    } else {
+      // 编辑已有文章
+      api.getArticle(to.params.id)
+        .then(article => {
+          next(vm => {
+            vm.article = { ...article }
+            vm.originalArticle = { ...article }
+            vm.startAutoSave()
+          })
+        })
+        .catch(() => {
+          next('/articles')
+        })
+    }
+  },
+  
+  // 🎯 场景5: 表单保护
+  beforeRouteLeave(to, from, next) {
+    // 停止自动保存
+    if (this.autoSaveTimer) {
+      clearInterval(this.autoSaveTimer)
+    }
+    
+    // 检查未保存的更改
+    if (this.hasUnsavedChanges) {
+      this.$confirm(
+        '您有未保存的更改，确定要离开吗？',
+        '提示',
+        {
+          confirmButtonText: '保存并离开',
+          cancelButtonText: '直接离开',
+          distinguishCancelAndClose: true,
+          type: 'warning'
+        }
+      ).then(() => {
+        // 保存并离开
+        this.saveArticle().then(() => next())
+      }).catch(action => {
+        if (action === 'cancel') {
+          // 直接离开
+          next()
+        } else {
+          // 取消离开
+          next(false)
+        }
+      })
+    } else {
+      next()
+    }
+  }
+}
+</script>
+```
+实际项目应用案例 🚀 
+
+电商网站的完整守卫策略 🛒 
+
+```js
+// 🎯 全局守卫 - 处理通用逻辑
+router.beforeEach(async (to, from, next) => {
+  // 显示页面加载状态
+  showPageLoading()
+  
+  // 用户认证
+  const token = getToken()
+  const needsAuth = to.matched.some(record => record.meta.requiresAuth)
+  
+  if (needsAuth && !token) {
+    next('/login')
+    return
+  }
+  
+  // 购物车数据同步
+  if (token && !store.getters.cartLoaded) {
+    await store.dispatch('cart/loadCart')
+  }
+  
+  next()
+})
+
+// 🎯 路由独享守卫 - 特定页面逻辑
+const routes = [
+  {
+    path: '/checkout',
+    component: Checkout,
+    beforeEnter: (to, from, next) => {
+      // 结算页面需要购物车有商品
+      const cartItems = store.getters.cartItems
+      if (cartItems.length === 0) {
+        ElMessage.warning('购物车为空')
+        next('/cart')
+        return
+      }
+      
+      // 检查商品库存
+      const hasOutOfStock = cartItems.some(item => item.stock <= 0)
+      if (hasOutOfStock) {
+        ElMessage.error('购物车中有商品缺货')
+        next('/cart')
+        return
+      }
+      
+      next()
+    }
+  },
+  
+  {
+    path: '/vip-sale',
+    component: VipSale,
+    beforeEnter: async (to, from, next) => {
+      // VIP专享活动
+      const userLevel = await getUserLevel()
+      if (userLevel < 3) {
+        next('/vip-upgrade')
+        return
+      }
+      next()
+    }
+  }
+]
+
+// 🎯 组件内守卫 - 组件特定逻辑
+// 商品详情页
+export default {
+  beforeRouteEnter(to, from, next) {
+    // 预取商品数据
+    Promise.all([
+      api.getProduct(to.params.id),
+      api.getProductReviews(to.params.id),
+      api.getRelatedProducts(to.params.id)
+    ]).then(([product, reviews, related]) => {
+      next(vm => {
+        vm.product = product
+        vm.reviews = reviews
+        vm.relatedProducts = related
+      })
+    })
+  }
+}
+```
+
+性能和维护建议 ⚡
+```js
+// 🎯 避免在守卫中执行耗时操作
+router.beforeEach(async (to, from, next) => {
+  // ❌ 避免每次都重新获取用户信息
+  // const userInfo = await api.getUserInfo()
+  
+  // ✅ 使用缓存或状态管理
+  let userInfo = store.getters.userInfo
+  if (!userInfo.id) {
+    userInfo = await store.dispatch('user/fetchUserInfo')
+  }
+  
+  next()
+})
+
+// 🎯 合理使用守卫优先级
+// 全局守卫处理通用逻辑，路由守卫处理特殊逻辑
+// 避免在多个地方重复相同的逻辑
+```
+理解三种守卫的使用场景，是构建安全、高效的Vue应用的关键！选择合适的守卫类型，不仅能让代码更清晰，还能提升应用的性能和可维护性。

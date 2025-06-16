@@ -158,6 +158,7 @@ export default defineConfig({
         items: [
           { text: 'Vue 使用', link: '/docs/second-exam/vue-usage.md' },
           { text: 'Vue 原理', link: '/docs/second-exam/vue-inner.md' },
+          { text: 'Vue 使用二', link: '/docs/second-exam/vue-usage-2.md' },
           { text: 'React 使用', link: '/docs/second-exam/react-usage.md' },
           { text: 'React 原理', link: '/docs/second-exam/react-inner.md' },
           { text: '小程序', link: '/docs/second-exam/mini-program.md' },
